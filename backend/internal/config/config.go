@@ -19,6 +19,7 @@ type Config struct {
 	S3Bucket        string
 	S3AccessKey     string
 	S3SecretKey     string
+	S3UsePathStyle  bool
 	JWTSecret       string
 	CORSOrigins     []string
 	ReadTimeout     time.Duration
@@ -38,6 +39,7 @@ func Load() (Config, error) {
 		S3Bucket:        os.Getenv("S3_BUCKET"),
 		S3AccessKey:     os.Getenv("S3_ACCESS_KEY"),
 		S3SecretKey:     os.Getenv("S3_SECRET_KEY"),
+		S3UsePathStyle:  boolEnv("S3_PATH_STYLE", false),
 		JWTSecret:       os.Getenv("JWT_SECRET"),
 		CORSOrigins:     splitCSV(getenv("CORS_ORIGINS", "http://localhost:5173")),
 		ReadTimeout:     durationEnv("HTTP_READ_TIMEOUT", 10*time.Second),
@@ -74,6 +76,18 @@ func durationEnv(key string, fallback time.Duration) time.Duration {
 		return fallback
 	}
 	return duration
+}
+
+func boolEnv(key string, fallback bool) bool {
+	value := strings.TrimSpace(strings.ToLower(os.Getenv(key)))
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return fallback
+	}
+	return parsed
 }
 
 func splitCSV(value string) []string {
