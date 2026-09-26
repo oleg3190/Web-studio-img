@@ -32,3 +32,14 @@ func TestInvalidPort(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestLoadS3PathStyle(t *testing.T) {
+	t.Setenv("S3_PATH_STYLE", "true")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
+	if !cfg.S3UsePathStyle {
+		t.Fatal("S3UsePathStyle = false, want true")
+	}
+}
