@@ -53,3 +53,15 @@ func TestServerConfigShutdownTimeout(t *testing.T) {
 		t.Fatal("expected server")
 	}
 }
+
+func TestConfigFromEnvDefault(t *testing.T) {
+	t.Setenv("REDIS_ADDR", "")
+	t.Setenv("REDIS_DB", "")
+	cfg := ConfigFromEnv()
+	if cfg.Address != "localhost:6379" {
+		t.Fatalf("expected default Redis address, got %q", cfg.Address)
+	}
+	if cfg.DB != 0 {
+		t.Fatalf("expected default Redis DB 0, got %d", cfg.DB)
+	}
+}
