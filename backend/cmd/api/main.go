@@ -1,3 +1,56 @@
 package main
-import("context";"errors";"log/slog";"net/http";"os";"os/signal";"syscall";"github.com/oleg3190/Web-studio-img/backend/internal/config";"github.com/oleg3190/Web-studio-img/backend/internal/httpapi")
-func main(){l:=slog.New(slog.NewJSONHandler(os.Stdout,nil));c,e:=config.Load();if e!=nil{l.Error("configuration error","error",e);os.Exit(1)};api:=httpapi.NewServer(l,c.CORSOrigins);srv:=api.HTTPServer(":"+c.Port,c.ReadTimeout,c.WriteTimeout,c.IdleTimeout);errCh:=make(chan error,1);go func(){l.Info("api server starting","addr",srv.Addr,"env",c.Env);if e:=srv.ListenAndServe();e!=nil&&!errors.Is(e,http.ErrServerClosed){errCh<-e}}();sig,stop:=signal.NotifyContext(context.Background(),os.Interrupt,syscall.SIGTERM);defer stop();select{case <-sig.Done():l.Info("shutdown signal received");case e:=<-errCh:l.Error("api server failed","error",e);os.Exit(1)};ctx,cancel:=context.WithTimeout(context.Background(),c.ShutdownTimeout);defer cancel();if e:=srv.Shutdown(ctx);e!=nil{l.Error("graceful shutdown failed","error",e);os.Exit(1)};l.Info("api server stopped")}
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/oleg3190/Web-studio-img/backend/internal/config"
+	"github.com/oleg3190/Web-studio-img/backend/internal/httpapi"
+)
+
+func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	cfg, err := config.Load()
+	if err != nil {
+		logger.Error("configuration error", "error", err)
+		os.Exit(1)
+	}
+
+	api := httpapi.NewServer(logger, cfg.CORSOrigins)
+	srv := api.HTTPServer(":"+cfg.Port, cfg.ReadTimeout, cfg.WriteTimeout, cfg.IdleTimeout)
+
+	errCh := make(chan error, 1)
+	go func() {
+		logger.Info("api server starting", "addr", srv.Addr, "env", cfg.Env)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
+		}
+	}()
+
+	sig, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	select {
+	case <-sig.Done():
+		logger.Info("shutdown signal received")
+	case err := <-errCh:
+		logger.Error("api server failed", "error", err)
+		os.Exit(1)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Error("graceful shutdown failed", "error", err)
+		os.Exit(1)
+	}
+
+	logger.Info("api server stopped")
+}
