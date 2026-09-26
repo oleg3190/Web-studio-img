@@ -1,2 +1,2 @@
-// Package queue contains the queue domain/infrastructure boundary for the backend.
+// Package queue provides the Redis-backed asynchronous job infrastructure.
 package queue
