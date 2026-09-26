@@ -6,17 +6,17 @@ import (
 )
 
 const (
-	envRedisAddr = "REDIS_ADDR"
+	envRedisAddr     = "REDIS_ADDR"
 	envRedisPassword = "REDIS_PASSWORD"
-	envRedisDB = "REDIS_DB"
-	envRedisPrefix = "REDIS_PREFIX"
+	envRedisDB       = "REDIS_DB"
+	envRedisPrefix   = "REDIS_PREFIX"
 )
 
 func ConfigFromEnv() Config {
 	cfg := Config{
-		Address: os.Getenv(envRedisAddr),
+		Address:  os.Getenv(envRedisAddr),
 		Password: os.Getenv(envRedisPassword),
-		Prefix: os.Getenv(envRedisPrefix),
+		Prefix:   os.Getenv(envRedisPrefix),
 	}
 	if cfg.Address == "" {
 		cfg.Address = "localhost:6379"
