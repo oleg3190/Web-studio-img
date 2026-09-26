@@ -42,9 +42,9 @@ func Load() (Config, error) {
 		S3UsePathStyle:  boolEnv("S3_PATH_STYLE", false),
 		JWTSecret:       os.Getenv("JWT_SECRET"),
 		CORSOrigins:     splitCSV(getenv("CORS_ORIGINS", "http://localhost:5173")),
-		ReadTimeout:     durationEnv("HTTP_READ_TIMEOUT", 10*time.Second),
-		WriteTimeout:    durationEnv("HTTP_WRITE_TIMEOUT", 15*time.Second),
-		IdleTimeout:     durationEnv("HTTP_IDLE_TIMEOUT", 60*time.Second),
+		ReadTimeout:    durationEnv("HTTP_READ_TIMEOUT", 10*time.Second),
+		WriteTimeout:   durationEnv("HTTP_WRITE_TIMEOUT", 15*time.Second),
+		IdleTimeout:    durationEnv("HTTP_IDLE_TIMEOUT", 60*time.Second),
 		ShutdownTimeout: durationEnv("HTTP_SHUTDOWN_TIMEOUT", 10*time.Second),
 	}
 	if cfg.Port == "" {
