@@ -7,11 +7,26 @@ export default [
   eslint.configs.recommended,
   ...vue.configs['flat/recommended'],
   {
-    files: ['**/*.{ts,vue}'],
+    files: ['**/*.ts'],
     languageOptions: {
       parser: tsParser,
+      globals: {
+        document: 'readonly',
+        fetch: 'readonly',
+        URL: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+      },
+    },
+    rules: {
+      'no-undef': 'off',
+    },
+  },
+  {
+    files: ['**/*.vue'],
+    languageOptions: {
       parserOptions: {
-        extraFileExtensions: ['.vue'],
+        parser: tsParser,
       },
       globals: {
         document: 'readonly',
@@ -20,6 +35,9 @@ export default [
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
       },
+    },
+    rules: {
+      'no-undef': 'off',
     },
   },
 ]
