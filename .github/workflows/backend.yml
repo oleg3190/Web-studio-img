@@ -55,6 +55,9 @@ jobs:
       - name: Validate sqlc generation
         run: sqlc generate
 
+      - name: Resolve generated-code dependencies
+        run: go mod tidy
+
       - name: Format check
         run: test -z "$(gofmt -l .)"
 
