@@ -1,38 +1,23 @@
-# Backend database foundation
+# Web Studio IMG Backend
 
-## Local PostgreSQL
+Go REST API foundation for Web Studio IMG.
 
-Start PostgreSQL with Docker Compose from the repository root:
+## Run
 
-```bash
-docker compose up -d postgres
-```
+From backend:
 
-Connection string:
+go run ./cmd/api
 
-```text
-postgres://webstudio:webstudio@localhost:5432/webstudio?sslmode=disable
-```
+The API listens on APP_PORT (default 8080). Health endpoints:
+- GET /healthz
+- GET /readyz
+- GET /api/v1/health
 
-## Migrations
+## Checks
 
-Install golang-migrate and run:
+go test ./...
+go test -race ./...
+go vet ./...
+gofmt -w ./cmd ./internal
 
-```bash
-make migrate-up
-make migrate-down
-```
-
-The migration is reversible and creates the foundation tables required by the technical specification.
-
-## sqlc
-
-From `backend/`:
-
-```bash
-sqlc generate
-```
-
-SQL queries live in `queries/`; generated Go code is emitted to `internal/db/`.
-
-Production object storage remains Yandex Object Storage through its S3-compatible API; PostgreSQL is the source of truth for business data.
+See docs/TECHNICAL_SPECIFICATION.md for the full architecture and environment contract.
