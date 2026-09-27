@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -102,7 +101,7 @@ func main() {
 	errCh := make(chan error, 1)
 	go func() {
 		logger.Info("generation worker starting")
-		if err := server.Run(mux); err != nil && !errors.Is(err, asynq.ErrServerClosed) {
+		if err := server.Run(mux); err != nil {
 			errCh <- err
 		}
 	}()
