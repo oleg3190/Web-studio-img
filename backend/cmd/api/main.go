@@ -79,7 +79,7 @@ func main() {
 			queueClient, queueErr := queue.NewClient(redisCfg)
 			if queueErr != nil { logger.Error("queue initialization failed", "error", queueErr); os.Exit(1) }
 			defer queueClient.Close()
-			provider, providerErr := yandexart.New(yandexart.Config{Endpoint: cfg.YandexARTEndpoint, APIKey: cfg.YandexARTAPIKey, FolderID: cfg.YandexARTFolderID, Model: cfg.YandexARTModel})
+			provider, providerErr := yandexart.New(yandexart.Config{Endpoint: cfg.YandexARTEndpoint, OperationEndpoint: cfg.YandexARTOperationEndpoint, APIKey: cfg.YandexARTAPIKey, FolderID: cfg.YandexARTFolderID, Model: cfg.YandexARTModel})
 			if providerErr != nil { logger.Error("YandexART initialization failed", "error", providerErr); os.Exit(1) }
 			generationStore, generationErr := generation.NewSQLStore(projectDB)
 			if generationErr != nil { logger.Error("generation store initialization failed", "error", generationErr); os.Exit(1) }
