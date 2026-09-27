@@ -15,6 +15,7 @@ import (
 	"github.com/oleg3190/Web-studio-img/backend/internal/config"
 	"github.com/oleg3190/Web-studio-img/backend/internal/generation"
 	"github.com/oleg3190/Web-studio-img/backend/internal/providers/yandexart"
+	"github.com/oleg3190/Web-studio-img/backend/internal/provenance"
 	"github.com/oleg3190/Web-studio-img/backend/internal/queue"
 	"github.com/oleg3190/Web-studio-img/backend/internal/httpapi"
 	"github.com/oleg3190/Web-studio-img/backend/internal/iterations"
@@ -83,7 +84,9 @@ func main() {
 			if providerErr != nil { logger.Error("YandexART initialization failed", "error", providerErr); os.Exit(1) }
 			generationStore, generationErr := generation.NewSQLStore(projectDB)
 			if generationErr != nil { logger.Error("generation store initialization failed", "error", generationErr); os.Exit(1) }
-			generationHandler, err = generation.NewHandler(generationStore, queueClient, provider)
+			provenanceStore, provenanceErr := provenance.NewStore(projectDB)
+			if provenanceErr != nil { logger.Error("provenance store initialization failed", "error", provenanceErr); os.Exit(1) }
+			generationHandler, err = generation.NewHandlerWithProvenance(generationStore, queueClient, provider, provenanceStore)
 			if err != nil { logger.Error("generation handler initialization failed", "error", err); os.Exit(1) }
 		}
 	}
