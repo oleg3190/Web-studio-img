@@ -188,9 +188,7 @@ func httpDetectContentType(data []byte) string {
 }
 
 func httpContentType(data []byte) string {
-	if len(data) >= 8 && string(data[:8]) == "PNG
-
-" {
+	if len(data) >= 8 && string(data[:8]) == "\x89PNG\r\n\x1a\n" {
 		return "image/png"
 	}
 	if len(data) >= 3 && data[0] == 0xff && data[1] == 0xd8 && data[2] == 0xff {
