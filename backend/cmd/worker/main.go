@@ -57,7 +57,7 @@ func main() {
 		logger.Error("redis configuration failed", "error", err)
 		os.Exit(1)
 	}
-	provider, err := yandexart.New(yandexart.Config{Endpoint: cfg.YandexARTEndpoint, APIKey: cfg.YandexARTAPIKey, FolderID: cfg.YandexARTFolderID, Model: cfg.YandexARTModel})
+	provider, err := yandexart.New(yandexart.Config{Endpoint: cfg.YandexARTEndpoint, OperationEndpoint: cfg.YandexARTOperationEndpoint, APIKey: cfg.YandexARTAPIKey, FolderID: cfg.YandexARTFolderID, Model: cfg.YandexARTModel})
 	if err != nil {
 		logger.Error("YandexART initialization failed", "error", err)
 		os.Exit(1)
