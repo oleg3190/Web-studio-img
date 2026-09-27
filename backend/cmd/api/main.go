@@ -13,6 +13,9 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/oleg3190/Web-studio-img/backend/internal/config"
+	"github.com/oleg3190/Web-studio-img/backend/internal/generation"
+	"github.com/oleg3190/Web-studio-img/backend/internal/providers/yandexart"
+	"github.com/oleg3190/Web-studio-img/backend/internal/queue"
 	"github.com/oleg3190/Web-studio-img/backend/internal/httpapi"
 	"github.com/oleg3190/Web-studio-img/backend/internal/iterations"
 	"github.com/oleg3190/Web-studio-img/backend/internal/projects"
@@ -32,6 +35,7 @@ func main() {
 	var projectDB *sql.DB
 	var projectHandler *projects.Handler
 	var iterationHandler *iterations.Handler
+	var generationHandler *generation.Handler
 	if cfg.DatabaseURL != "" {
 		projectDB, err = sql.Open("pgx", cfg.DatabaseURL)
 		if err != nil {
@@ -68,9 +72,23 @@ func main() {
 			logger.Error("iteration handler initialization failed", "error", err)
 			os.Exit(1)
 		}
+
+		if cfg.RedisURL != "" && cfg.YandexARTAPIKey != "" && cfg.YandexARTFolderID != "" {
+			redisCfg, redisErr := queue.ParseRedisURL(cfg.RedisURL)
+			if redisErr != nil { logger.Error("redis configuration failed", "error", redisErr); os.Exit(1) }
+			queueClient, queueErr := queue.NewClient(redisCfg)
+			if queueErr != nil { logger.Error("queue initialization failed", "error", queueErr); os.Exit(1) }
+			defer queueClient.Close()
+			provider, providerErr := yandexart.New(yandexart.Config{Endpoint: cfg.YandexARTEndpoint, APIKey: cfg.YandexARTAPIKey, FolderID: cfg.YandexARTFolderID, Model: cfg.YandexARTModel})
+			if providerErr != nil { logger.Error("YandexART initialization failed", "error", providerErr); os.Exit(1) }
+			generationStore, generationErr := generation.NewSQLStore(projectDB)
+			if generationErr != nil { logger.Error("generation store initialization failed", "error", generationErr); os.Exit(1) }
+			generationHandler, err = generation.NewHandler(generationStore, queueClient, provider)
+			if err != nil { logger.Error("generation handler initialization failed", "error", err); os.Exit(1) }
+		}
 	}
 
-	api := httpapi.NewServerWithProjectsAndIterations(logger, cfg.CORSOrigins, limiter, projectHandler, iterationHandler)
+	api := httpapi.NewServerWithProjectsIterationsAndGeneration(logger, cfg.CORSOrigins, limiter, projectHandler, iterationHandler, generationHandler)
 	srv := api.HTTPServer(":"+cfg.Port, cfg.ReadTimeout, cfg.WriteTimeout, cfg.IdleTimeout)
 
 	errCh := make(chan error, 1)
