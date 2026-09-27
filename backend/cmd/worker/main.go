@@ -17,6 +17,7 @@ import (
 	"github.com/oleg3190/Web-studio-img/backend/internal/config"
 	"github.com/oleg3190/Web-studio-img/backend/internal/generation"
 	"github.com/oleg3190/Web-studio-img/backend/internal/providers/yandexart"
+	"github.com/oleg3190/Web-studio-img/backend/internal/provenance"
 	"github.com/oleg3190/Web-studio-img/backend/internal/queue"
 	"github.com/oleg3190/Web-studio-img/backend/internal/storage"
 )
@@ -81,9 +82,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	provenanceStore, err := provenance.NewStore(db)
+	if err != nil { logger.Error("provenance store initialization failed", "error", err); os.Exit(1) }
 	worker := &generation.Worker{
 		Store: store, Provider: provider,
 		Assets: &assets.Processor{Storage: objectStorage, Store: assetStore},
+		Provenance: provenanceStore,
 	}
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(generation.TaskType, worker.Handle)
