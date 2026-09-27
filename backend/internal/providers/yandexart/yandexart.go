@@ -37,6 +37,12 @@ type Provider struct {
 	client *http.Client
 }
 
+type retryableError struct{ err error }
+
+func (e retryableError) Error() string { return e.err.Error() }
+func (e retryableError) Unwrap() error { return e.err }
+func (e retryableError) Retryable() bool { return true }
+
 func New(cfg Config) (*Provider, error) {
 	if cfg.Endpoint == "" {
 		cfg.Endpoint = "https://llm.api.cloud.yandex.net"
@@ -191,7 +197,7 @@ func (p *Provider) doJSONURL(ctx context.Context, endpoint, method, path string,
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := p.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrProviderUnavailable, err)
+		return retryableError{fmt.Errorf("%w: %v", ErrProviderUnavailable, err)}
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -199,7 +205,7 @@ func (p *Provider) doJSONURL(ctx context.Context, endpoint, method, path string,
 		if resp.StatusCode == http.StatusBadRequest || resp.StatusCode == http.StatusUnprocessableEntity {
 			return fmt.Errorf("%w: status=%d body=%s", ErrProviderInvalid, resp.StatusCode, strings.TrimSpace(string(body)))
 		}
-		return fmt.Errorf("%w: status=%d body=%s", ErrProviderUnavailable, resp.StatusCode, strings.TrimSpace(string(body)))
+		return retryableError{fmt.Errorf("%w: status=%d body=%s", ErrProviderUnavailable, resp.StatusCode, strings.TrimSpace(string(body)))}
 	}
 	if out == nil {
 		return nil
