@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/oleg3190/Web-studio-img/backend/internal/iterations"
+	"github.com/oleg3190/Web-studio-img/backend/internal/generation"
 	"github.com/oleg3190/Web-studio-img/backend/internal/projects"
 	"github.com/oleg3190/Web-studio-img/backend/internal/security"
 )
@@ -16,15 +17,19 @@ type Server struct {
 }
 
 func NewServer(logger *slog.Logger, origins []string, limiter *security.RateLimiter) *Server {
-	return newServer(logger, origins, limiter, nil, nil)
+	return newServer(logger, origins, limiter, nil, nil, nil)
 }
 
 func NewServerWithProjects(logger *slog.Logger, origins []string, limiter *security.RateLimiter, projectHandler *projects.Handler) *Server {
-	return newServer(logger, origins, limiter, projectHandler, nil)
+	return newServer(logger, origins, limiter, projectHandler, nil, nil)
 }
 
-func NewServerWithProjectsAndIterations(logger *slog.Logger, origins []string, limiter *security.RateLimiter, projectHandler *projects.Handler, iterationHandler *iterations.Handler) *Server {
-	return newServer(logger, origins, limiter, projectHandler, iterationHandler)
+func NewServerWithProjectsAndIterations(logger *slog.Logger, origins []string, limiter *security.RateLimiter, projectHandler *projects.Handler, iterationHandler *iterations.Handler, generationHandler *generation.Handler) *Server {
+	return newServer(logger, origins, limiter, projectHandler, iterationHandler, nil)
+}
+
+func NewServerWithProjectsIterationsAndGeneration(logger *slog.Logger, origins []string, limiter *security.RateLimiter, projectHandler *projects.Handler, iterationHandler *iterations.Handler, generationHandler *generation.Handler) *Server {
+	return newServer(logger, origins, limiter, projectHandler, iterationHandler, generationHandler)
 }
 
 func newServer(logger *slog.Logger, origins []string, limiter *security.RateLimiter, projectHandler *projects.Handler, iterationHandler *iterations.Handler) *Server {
@@ -37,6 +42,9 @@ func newServer(logger *slog.Logger, origins []string, limiter *security.RateLimi
 	}
 	if iterationHandler != nil {
 		iterationHandler.Register(mux)
+	}
+	if generationHandler != nil {
+		generationHandler.Register(mux)
 	}
 
 	var handler http.Handler = mux
