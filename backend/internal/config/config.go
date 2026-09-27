@@ -28,6 +28,10 @@ type Config struct {
 	WriteTimeout    time.Duration
 	IdleTimeout     time.Duration
 	ShutdownTimeout time.Duration
+	YandexARTEndpoint string
+	YandexARTAPIKey string
+	YandexARTFolderID string
+	YandexARTModel string
 }
 
 func Load() (Config, error) {
@@ -50,6 +54,10 @@ func Load() (Config, error) {
 		WriteTimeout:    durationEnv("HTTP_WRITE_TIMEOUT", 15*time.Second),
 		IdleTimeout:     durationEnv("HTTP_IDLE_TIMEOUT", 60*time.Second),
 		ShutdownTimeout: durationEnv("HTTP_SHUTDOWN_TIMEOUT", 10*time.Second),
+		YandexARTEndpoint: getenv("YANDEXART_ENDPOINT", "https://llm.api.cloud.yandex.net"),
+		YandexARTAPIKey: os.Getenv("YANDEXART_API_KEY"),
+		YandexARTFolderID: os.Getenv("YANDEXART_FOLDER_ID"),
+		YandexARTModel: getenv("YANDEXART_MODEL", "yandex-art/latest"),
 	}
 	if cfg.Port == "" {
 		return Config{}, errors.New("APP_PORT must not be empty")
