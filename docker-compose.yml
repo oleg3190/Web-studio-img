@@ -1,4 +1,51 @@
 services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      APP_PORT: "8080"
+      DATABASE_URL: postgres://webstudio:webstudio@postgres:5432/webstudio?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: ru-central1
+      S3_BUCKET: web-studio
+      S3_ACCESS_KEY: minio
+      S3_SECRET_KEY: miniosecret
+      S3_PATH_STYLE: "true"
+      YANDEXART_API_KEY: ${YANDEXART_API_KEY:-}
+      YANDEXART_FOLDER_ID: ${YANDEXART_FOLDER_ID:-}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    environment:
+      DATABASE_URL: postgres://webstudio:webstudio@postgres:5432/webstudio?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: ru-central1
+      S3_BUCKET: web-studio
+      S3_ACCESS_KEY: minio
+      S3_SECRET_KEY: miniosecret
+      S3_PATH_STYLE: "true"
+      YANDEXART_API_KEY: ${YANDEXART_API_KEY:-}
+      YANDEXART_FOLDER_ID: ${YANDEXART_FOLDER_ID:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
   redis:
     image: redis:7-alpine
     ports:
