@@ -19,7 +19,7 @@ func TestProviderMapsAsyncOperationToImage(t *testing.T) {
 	operationServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		operationHits++
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(\`{"id":"op-1","done":true,"response":{"image":"\` + image + \`","modelVersion":"2026.01"}}\`))
+		_, _ = w.Write([]byte(`{"id":"op-1","done":true,"response":{"image":"` + image + `","modelVersion":"2026.01"}}`))
 	}))
 	defer operationServer.Close()
 
@@ -28,7 +28,7 @@ func TestProviderMapsAsyncOperationToImage(t *testing.T) {
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(\`{"id":"op-1","done":false}\`))
+		_, _ = w.Write([]byte(`{"id":"op-1","done":false}`))
 	}))
 	defer apiServer.Close()
 
