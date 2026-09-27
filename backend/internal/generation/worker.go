@@ -90,6 +90,6 @@ func isRetryable(err error) bool {
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return true
 	}
-	var unavailable interface{ Unwrap() error }
-	return errors.As(err, &unavailable)
+	var retryable interface{ Retryable() bool }
+	return errors.As(err, &retryable) && retryable.Retryable()
 }
