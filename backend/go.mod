@@ -12,6 +12,6 @@ require (
 	github.com/hibiken/asynq v0.25.1
 	github.com/jackc/pgx/v5 v5.7.4
 	golang.org/x/crypto v0.41.0
-	github.com/rwcarlsen/goexif v0.0.0-20190401172107-1d0f2a4b7e7b
+	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
 	golang.org/x/image v0.28.0
 )
