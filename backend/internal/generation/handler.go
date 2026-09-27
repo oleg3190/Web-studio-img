@@ -13,6 +13,7 @@ import (
 	"github.com/hibiken/asynq"
 
 	"github.com/oleg3190/Web-studio-img/backend/internal/auth"
+	"github.com/oleg3190/Web-studio-img/backend/internal/provenance"
 )
 
 type Enqueuer interface {
@@ -23,13 +24,18 @@ type Handler struct {
 	store Store
 	queue Enqueuer
 	provider Provider
+	provenance *provenance.Store
 }
 
 func NewHandler(store Store, queue Enqueuer, provider Provider) (*Handler, error) {
+	return NewHandlerWithProvenance(store, queue, provider, nil)
+}
+
+func NewHandlerWithProvenance(store Store, queue Enqueuer, provider Provider, provenanceStore *provenance.Store) (*Handler, error) {
 	if store == nil || queue == nil || provider == nil {
 		return nil, errors.New("generation handler requires store, queue and provider")
 	}
-	return &Handler{store: store, queue: queue, provider: provider}, nil
+	return &Handler{store: store, queue: queue, provider: provider, provenance: provenanceStore}, nil
 }
 
 func (h *Handler) Register(mux *http.ServeMux) {
@@ -98,6 +104,9 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusServiceUnavailable, "queue_failed", "could not enqueue generation")
 			return
 		}
+	}
+	if created && h.provenance != nil {
+		_, _ = h.provenance.Append(r.Context(), provenance.Event{UserID: userID, ProjectID: projectID, IterationID: req.IterationID, EntityType: "generation", EntityID: item.ID, Action: "generation_queued", Payload: map[string]any{"provider": item.Provider, "model": item.Model, "prompt": item.Prompt, "negative_prompt": item.NegativePrompt, "seed": item.Seed, "aspect_ratio": item.AspectRatio, "parameters": item.Parameters}, CreatedAt: time.Now()})
 	}
 	status := http.StatusAccepted
 	if !created {
