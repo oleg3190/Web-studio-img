@@ -101,3 +101,55 @@ export const iterationsApi = {
       method: 'POST',
     }),
 }
+
+
+export type GenerationStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
+
+export interface Generation {
+  id: string
+  project_id: string
+  iteration_id?: string
+  user_id: string
+  provider: string
+  model: string
+  model_version?: string
+  prompt: string
+  negative_prompt?: string
+  seed?: number
+  aspect_ratio?: string
+  parameters?: Record<string, unknown>
+  status: GenerationStatus
+  provider_job_id?: string
+  error_code?: string
+  error_message?: string
+  cost?: number
+  created_at: string
+  started_at?: string
+  completed_at?: string
+}
+
+export const generationsApi = {
+  create: (
+    projectId: string,
+    input: {
+      iteration_id?: string
+      prompt: string
+      negative_prompt?: string
+      seed?: number
+      aspect_ratio?: string
+      parameters?: Record<string, unknown>
+    },
+    idempotencyKey: string,
+  ) =>
+    apiRequest<Generation>(`/projects/${projectId}/generations`, {
+      method: 'POST',
+      headers: { 'Idempotency-Key': idempotencyKey },
+      body: JSON.stringify(input),
+    }),
+  get: (projectId: string, generationId: string) =>
+    apiRequest<Generation>(`/projects/${projectId}/generations/${generationId}`),
+  cancel: (projectId: string, generationId: string) =>
+    apiRequest<Generation>(`/projects/${projectId}/generations/${generationId}/cancel`, {
+      method: 'POST',
+    }),
+}
