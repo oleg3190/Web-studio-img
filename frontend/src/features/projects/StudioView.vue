@@ -124,6 +124,9 @@ onMounted(async () => {
     loading.value = false
   }
 })
+onUnmounted(() => {
+  if (generationTimer) clearInterval(generationTimer)
+})
 </script>
 
 <template>
@@ -237,7 +240,3 @@ onMounted(async () => {
 .generation { display: grid; gap: 8px; }
 </style>
 
-
-onUnmounted(() => {
-  if (generationTimer) clearInterval(generationTimer)
-})
