@@ -200,10 +200,7 @@ func (h *Handler) events(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		data, _ := json.Marshal(item)
-		_, _ = fmt.Fprintf(w, "event: generation
-data: %s
-
-", data)
+		_, _ = fmt.Fprintf(w, "event: generation\ndata: %s\n\n", data)
 		flusher.Flush()
 		if item.Status == StatusSucceeded || item.Status == StatusFailed || item.Status == StatusCancelled {
 			return
