@@ -11,6 +11,7 @@ import (
 	"github.com/hibiken/asynq"
 
 	"github.com/oleg3190/Web-studio-img/backend/internal/assets"
+	"github.com/oleg3190/Web-studio-img/backend/internal/provenance"
 )
 
 const TaskType = "generation:execute"
@@ -32,6 +33,7 @@ type Worker struct {
 	Store    Store
 	Provider Provider
 	Assets   *assets.Processor
+	Provenance *provenance.Store
 }
 
 func (w *Worker) Handle(ctx context.Context, task *asynq.Task) error {
@@ -62,6 +64,7 @@ func (w *Worker) Handle(ctx context.Context, task *asynq.Task) error {
 		}
 		if !isRetryable(err) {
 			_ = w.Store.MarkFailed(ctx, payload.UserID, item.ID, code, err.Error(), time.Now())
+			if w.Provenance != nil { _, _ = w.Provenance.Append(ctx, provenance.Event{UserID: payload.UserID, ProjectID: item.ProjectID, IterationID: item.IterationID, EntityType: "generation", EntityID: item.ID, Action: "generation_failed", Payload: map[string]any{"code": code, "message": err.Error()}, CreatedAt: time.Now()}) }
 			return nil
 		}
 		return err
@@ -82,6 +85,9 @@ func (w *Worker) Handle(ctx context.Context, task *asynq.Task) error {
 	}
 	if err := w.Store.MarkSucceeded(ctx, payload.UserID, item.ID, version, jobID, result.Cost, time.Now()); err != nil {
 		return err
+	}
+	if w.Provenance != nil {
+		_, _ = w.Provenance.Append(ctx, provenance.Event{UserID: payload.UserID, ProjectID: item.ProjectID, IterationID: item.IterationID, EntityType: "generation", EntityID: item.ID, Action: "generation_succeeded", Payload: map[string]any{"provider": item.Provider, "model": item.Model, "model_version": result.ModelVersion, "provider_job_id": result.ProviderJobID, "cost": result.Cost}, CreatedAt: time.Now()})
 	}
 	return nil
 }
