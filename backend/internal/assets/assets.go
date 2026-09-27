@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
-	"io"
 	"strings"
 	"time"
 
@@ -200,4 +199,3 @@ func httpContentType(data []byte) string {
 	return "application/octet-stream"
 }
 
-var _ io.Reader
