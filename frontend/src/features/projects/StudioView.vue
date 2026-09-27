@@ -1,8 +1,8 @@
 <!-- eslint-disable vue/max-attributes-per-line, vue/singleline-html-element-content-newline -->
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
-import { iterationsApi, projectsApi, type Iteration, type IterationType, type Project } from '../../api/client'
+import { generationsApi, iterationsApi, projectsApi, type Generation, type Iteration, type IterationType, type Project } from '../../api/client'
 
 const route = useRoute()
 const project = ref<Project | null>(null)
@@ -10,6 +10,9 @@ const iterations = ref<Iteration[]>([])
 const error = ref<string | null>(null)
 const loading = ref(true)
 const creating = ref(false)
+const generating = ref(false)
+const generations = ref<Generation[]>([])
+let generationTimer: ReturnType<typeof setInterval> | undefined
 
 const types: IterationType[] = ['idea', 'sketch', 'generation', 'selection', 'composition', 'prompt', 'manual_edit', 'final']
 const form = ref<{ type: IterationType; title: string; description: string }>({
@@ -17,6 +20,7 @@ const form = ref<{ type: IterationType; title: string; description: string }>({
   title: '',
   description: '',
 })
+const generationForm = ref({ prompt: '', negative_prompt: '', aspect_ratio: '1:1', seed: undefined as number | undefined })
 
 async function loadTimeline() {
   const projectId = String(route.params.projectId)
@@ -44,6 +48,60 @@ async function createIteration() {
     error.value = err instanceof Error ? err.message : 'Could not create iteration'
   } finally {
     creating.value = false
+  }
+}
+
+async function createGeneration() {
+  generating.value = true
+  error.value = null
+  try {
+    const projectId = String(route.params.projectId)
+    const created = await generationsApi.create(projectId, {
+      prompt: generationForm.value.prompt.trim(),
+      negative_prompt: generationForm.value.negative_prompt.trim() || undefined,
+      aspect_ratio: generationForm.value.aspect_ratio,
+      seed: generationForm.value.seed,
+    }, crypto.randomUUID())
+    generations.value = [created, ...generations.value.filter(item => item.id !== created.id)]
+    generationForm.value = { prompt: '', negative_prompt: '', aspect_ratio: '1:1', seed: undefined }
+    startGenerationPolling()
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Could not queue generation'
+  } finally {
+    generating.value = false
+  }
+}
+
+function startGenerationPolling() {
+  if (generationTimer) return
+  generationTimer = setInterval(async () => {
+    const projectId = String(route.params.projectId)
+    const active = generations.value.filter(item => item.status === 'queued' || item.status === 'running')
+    if (active.length === 0) {
+      clearInterval(generationTimer)
+      generationTimer = undefined
+      return
+    }
+    await Promise.all(active.map(async item => {
+      try {
+        const updated = await generationsApi.get(projectId, item.id)
+        const index = generations.value.findIndex(candidate => candidate.id === item.id)
+        if (index >= 0) generations.value[index] = updated
+      } catch {
+        // Keep the last known status; the next poll retries.
+      }
+    }))
+  }, 1000)
+}
+
+async function cancelGeneration(item: Generation) {
+  error.value = null
+  try {
+    const updated = await generationsApi.cancel(String(route.params.projectId), item.id)
+    const index = generations.value.findIndex(candidate => candidate.id === item.id)
+    if (index >= 0) generations.value[index] = updated
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Could not cancel generation'
   }
 }
 
@@ -99,6 +157,48 @@ onMounted(async () => {
           </el-form>
         </el-card>
 
+
+        <el-card class="create-card">
+          <template #header>Generate image</template>
+          <el-form label-position="top" @submit.prevent="createGeneration">
+            <el-form-item label="Prompt">
+              <el-input v-model="generationForm.prompt" type="textarea" maxlength="20000" show-word-limit />
+            </el-form-item>
+            <el-form-item label="Negative prompt">
+              <el-input v-model="generationForm.negative_prompt" type="textarea" maxlength="10000" />
+            </el-form-item>
+            <el-form-item label="Aspect ratio">
+              <el-select v-model="generationForm.aspect_ratio">
+                <el-option label="1:1" value="1:1" />
+                <el-option label="16:9" value="16:9" />
+                <el-option label="9:16" value="9:16" />
+                <el-option label="4:3" value="4:3" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Seed (optional)">
+              <el-input-number v-model="generationForm.seed" :min="0" />
+            </el-form-item>
+            <el-button type="primary" :loading="generating" :disabled="!generationForm.prompt.trim()" @click="createGeneration">Generate</el-button>
+          </el-form>
+        </el-card>
+
+        <el-card v-if="generations.length" class="timeline-card">
+          <template #header>Generation Queue</template>
+          <el-timeline>
+            <el-timeline-item v-for="item in generations" :key="item.id" :timestamp="new Date(item.created_at).toLocaleString()" placement="top">
+              <div class="generation">
+                <div class="iteration-head">
+                  <el-tag :type="item.status === 'succeeded' ? 'success' : item.status === 'failed' ? 'danger' : 'warning'">{{ item.status }}</el-tag>
+                  <strong>{{ item.prompt }}</strong>
+                  <el-button v-if="item.status === 'queued' || item.status === 'running'" size="small" @click="cancelGeneration(item)">Cancel</el-button>
+                </div>
+                <small v-if="item.model_version">Model version: {{ item.model_version }}</small>
+                <el-alert v-if="item.error_message" :title="item.error_message" type="error" :closable="false" />
+              </div>
+            </el-timeline-item>
+          </el-timeline>
+        </el-card>
+
         <el-card class="timeline-card">
           <template #header>Creative Timeline</template>
           <el-empty v-if="iterations.length === 0" description="No iterations yet." />
@@ -133,5 +233,11 @@ onMounted(async () => {
 .iteration { display: grid; gap: 8px; }
 .iteration-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .iteration p { margin: 0; }
-.iteration small { color: var(--el-text-color-secondary); }
+.iteration small, .generation small { color: var(--el-text-color-secondary); }
+.generation { display: grid; gap: 8px; }
 </style>
+
+
+onUnmounted(() => {
+  if (generationTimer) clearInterval(generationTimer)
+})
