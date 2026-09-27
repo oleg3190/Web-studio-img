@@ -188,10 +188,97 @@ paths:
               schema: {$ref: '#/components/schemas/Iteration'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+
+  /projects/{project_id}/generations:
+    parameters:
+      - name: project_id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      operationId: createGeneration
+      summary: Queue an asynchronous image generation
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 200}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/GenerationInput'}
+      responses:
+        '202':
+          description: Generation queued
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Generation'}
+        '200':
+          description: Existing idempotent generation
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Generation'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /projects/{project_id}/generations/{generation_id}:
+    parameters:
+      - name: project_id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: generation_id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      operationId: getGeneration
+      summary: Get generation status and provenance parameters
+      responses:
+        '200':
+          description: Generation
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Generation'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /projects/{project_id}/generations/{generation_id}/cancel:
+    post:
+      operationId: cancelGeneration
+      summary: Cancel a queued or running generation
+      responses:
+        '200':
+          description: Cancelled generation
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Generation'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /projects/{project_id}/generations/{generation_id}/events:
+    get:
+      operationId: streamGenerationEvents
+      summary: Stream generation status over SSE
+      responses:
+        '200':
+          description: Server-sent generation status events
+          content:
+            text/event-stream:
+              schema: {type: string}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+
 components:
   responses:
     BadRequest:
       description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Conflict
       content:
         application/json:
           schema:
@@ -270,6 +357,53 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Project'
+
+    Generation:
+      type: object
+      required: [id, project_id, user_id, provider, model, prompt, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        project_id: {type: string, format: uuid}
+        iteration_id: {type: string, format: uuid}
+        user_id: {type: string, format: uuid}
+        provider: {type: string}
+        model: {type: string}
+        model_version: {type: string}
+        prompt: {type: string}
+        negative_prompt: {type: string}
+        seed: {type: integer, format: int64}
+        aspect_ratio: {type: string}
+        parameters: {type: object, additionalProperties: true}
+        status: {type: string, enum: [queued, running, succeeded, failed, cancelled]}
+        provider_job_id: {type: string}
+        error_code: {type: string}
+        error_message: {type: string}
+        cost: {type: number, format: double}
+        created_at: {type: string, format: date-time}
+        started_at: {type: string, format: date-time}
+        completed_at: {type: string, format: date-time}
+    GenerationInput:
+      type: object
+      additionalProperties: false
+      required: [prompt]
+      properties:
+        iteration_id: {type: string, format: uuid}
+        prompt: {type: string, minLength: 1, maxLength: 20000}
+        negative_prompt: {type: string, maxLength: 10000}
+        seed: {type: integer, format: int64}
+        aspect_ratio: {type: string, pattern: '^[0-9]+:[0-9]+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            request_id: {type: string}
+}
+        parameters: {type: object, additionalProperties: true}
+
     Error:
       type: object
       required: [error]
