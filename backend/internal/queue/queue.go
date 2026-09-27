@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -25,6 +28,20 @@ func (c Config) validate() error {
 		return fmt.Errorf("%w: db must be non-negative", ErrInvalidRedisConfig)
 	}
 	return nil
+}
+
+func ParseRedisURL(value string) (Config, error) {
+	value = strings.TrimSpace(value)
+	if value == "" { return Config{}, ErrInvalidRedisConfig }
+	if !strings.Contains(value, "://") { return Config{Address: value}, nil }
+	u, err := url.Parse(value)
+	if err != nil || u.Host == "" { return Config{}, fmt.Errorf("%w: invalid redis URL", ErrInvalidRedisConfig) }
+	db := 0
+	if strings.Trim(u.Path, "/") != "" {
+		db, err = strconv.Atoi(strings.Trim(u.Path, "/")); if err != nil || db < 0 { return Config{}, fmt.Errorf("%w: invalid database", ErrInvalidRedisConfig) }
+	}
+	password, _ := u.User.Password()
+	return Config{Address: u.Host, Password: password, DB: db}, nil
 }
 
 type Client struct {
