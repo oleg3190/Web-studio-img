@@ -24,7 +24,7 @@ func NewServerWithProjects(logger *slog.Logger, origins []string, limiter *secur
 	return newServer(logger, origins, limiter, projectHandler, nil, nil)
 }
 
-func NewServerWithProjectsAndIterations(logger *slog.Logger, origins []string, limiter *security.RateLimiter, projectHandler *projects.Handler, iterationHandler *iterations.Handler, generationHandler *generation.Handler) *Server {
+func NewServerWithProjectsAndIterations(logger *slog.Logger, origins []string, limiter *security.RateLimiter, projectHandler *projects.Handler, iterationHandler *iterations.Handler) *Server {
 	return newServer(logger, origins, limiter, projectHandler, iterationHandler, nil)
 }
 
@@ -32,7 +32,7 @@ func NewServerWithProjectsIterationsAndGeneration(logger *slog.Logger, origins [
 	return newServer(logger, origins, limiter, projectHandler, iterationHandler, generationHandler)
 }
 
-func newServer(logger *slog.Logger, origins []string, limiter *security.RateLimiter, projectHandler *projects.Handler, iterationHandler *iterations.Handler) *Server {
+func newServer(logger *slog.Logger, origins []string, limiter *security.RateLimiter, projectHandler *projects.Handler, iterationHandler *iterations.Handler, generationHandler *generation.Handler) *Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", healthHandler)
 	mux.HandleFunc("GET /readyz", readyHandler)
