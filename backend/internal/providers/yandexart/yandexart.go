@@ -24,6 +24,7 @@ var (
 
 type Config struct {
 	Endpoint  string
+	OperationEndpoint string
 	APIKey    string
 	FolderID  string
 	Model     string
@@ -40,8 +41,11 @@ func New(cfg Config) (*Provider, error) {
 	if cfg.Endpoint == "" {
 		cfg.Endpoint = "https://llm.api.cloud.yandex.net"
 	}
+	if cfg.OperationEndpoint == "" {
+		cfg.OperationEndpoint = "https://operation.api.cloud.yandex.net"
+	}
 	if cfg.Model == "" {
-		cfg.Model = "yandex-art"
+		cfg.Model = "yandex-art/latest"
 	}
 	if cfg.Timeout <= 0 {
 		cfg.Timeout = 5 * time.Minute
@@ -131,7 +135,7 @@ func (p *Provider) Generate(ctx context.Context, req generation.Request) (genera
 			return generation.ProviderResult{}, pollCtx.Err()
 		case <-timer.C:
 		}
-		if err := p.doJSON(pollCtx, http.MethodGet, "/operations/"+op.ID, nil, &op); err != nil {
+		if err := p.doJSONURL(pollCtx, p.cfg.OperationEndpoint, http.MethodGet, "/operations/"+op.ID, nil, &op); err != nil {
 			return generation.ProviderResult{}, err
 		}
 	}
@@ -160,13 +164,17 @@ func (p *Provider) Cancel(ctx context.Context, operationID string) error {
 		return nil
 	}
 	var op operation
-	if err := p.doJSON(ctx, http.MethodPost, "/operations/"+operationID+":cancel", nil, &op); err != nil {
+	if err := p.doJSONURL(ctx, p.cfg.OperationEndpoint, http.MethodGet, "/operations/"+operationID+":cancel", nil, &op); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (p *Provider) doJSON(ctx context.Context, method, path string, body, out any) error {
+	return p.doJSONURL(ctx, p.cfg.Endpoint, method, path, body, out)
+}
+
+func (p *Provider) doJSONURL(ctx context.Context, endpoint, method, path string, body, out any) error {
 	var reader io.Reader
 	if body != nil {
 		data, err := json.Marshal(body)
@@ -175,7 +183,7 @@ func (p *Provider) doJSON(ctx context.Context, method, path string, body, out an
 		}
 		reader = bytes.NewReader(data)
 	}
-	req, err := http.NewRequestWithContext(ctx, method, strings.TrimRight(p.cfg.Endpoint, "/")+path, reader)
+	req, err := http.NewRequestWithContext(ctx, method, strings.TrimRight(endpoint, "/")+path, reader)
 	if err != nil {
 		return err
 	}
